@@ -1,0 +1,55 @@
+#! web-deployment.yaml
+# Generated code, do not edit
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: web
+    namespace: propertymgmt
+    labels:
+        com.docker.compose.project: propertymgmt
+        com.docker.compose.service: web
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            com.docker.compose.project: propertymgmt
+            com.docker.compose.service: web
+    strategy:
+        type: Recreate
+    template:
+        metadata:
+            labels:
+                com.docker.compose.project: propertymgmt
+                com.docker.compose.service: web
+                com.docker.compose.network.default: "true"
+        spec:
+            containers:
+                - name: propertymgmt-web
+                  image: propertymgmt-web
+                  imagePullPolicy: IfNotPresent
+                  command: ['gunicorn propertymgmt.wsgi:application --bind 0.0.0.0:8000']
+                  env:
+                    - name: DATABASE_HOST
+                      value: "db"
+                    - name: DATABASE_NAME
+                      value: "propertymgmt"
+                    - name: DATABASE_PASSWORD
+                      value: "postgres"
+                    - name: DATABASE_PORT
+                      value: "5432"
+                    - name: DATABASE_USER
+                      value: "postgres"
+                    - name: DEBUG
+                      value: "1"
+                    - name: DJANGO_ALLOWED_HOSTS
+                      value: "localhost 127.0.0.1"
+                  ports:
+                    - name: web-8000
+                      containerPort: 8000
+                  volumeMounts:
+                    - name: app
+                      mountPath: /app
+            volumes:
+                - name: app
+                  hostPath:
+                    path: /Users/davidyaotse/Downloads/flintsky_mgmt/propertymgmt

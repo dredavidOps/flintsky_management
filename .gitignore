@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+
+# Env
+.env
+*.env
+
+# Django
+/staticfiles/
+/media/
+/*.log
+
+# Docker
+*.pid
+
+# VSCode
+.vscode/
+
+# MacOS
+.DS_Store
+
+# Kubernetes
+# (do NOT ignore your yaml manifests!)
+
+# Migration files (optional)
+# core/migrations/
