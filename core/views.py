@@ -1,8 +1,10 @@
 from django.shortcuts import render
 
 from rest_framework import viewsets, generics
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
 from datetime import date, timedelta
 
 from .models import Apartment, Tenant, Lease, MaintenanceRequest
@@ -13,20 +15,30 @@ from .serializers import (
 class ApartmentViewSet(viewsets.ModelViewSet):
     queryset = Apartment.objects.all()
     serializer_class = ApartmentSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
 class TenantViewSet(viewsets.ModelViewSet):
     queryset = Tenant.objects.all()
     serializer_class = TenantSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
 class LeaseViewSet(viewsets.ModelViewSet):
     queryset = Lease.objects.all()
     serializer_class = LeaseSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
 class MaintenanceRequestViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceRequest.objects.all()
     serializer_class = MaintenanceRequestSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
 @api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def overview(request):
     total = Apartment.objects.count()
     occupied = Apartment.objects.filter(status='occupied').count()
@@ -54,6 +66,8 @@ def overview(request):
 
 class UpcomingMoveInsView(generics.ListAPIView):
     serializer_class = LeaseSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
     def get_queryset(self):
         today = date.today()
         next_week = today + timedelta(days=7)
@@ -61,6 +75,8 @@ class UpcomingMoveInsView(generics.ListAPIView):
 
 class UpcomingMoveOutsView(generics.ListAPIView):
     serializer_class = LeaseSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
     def get_queryset(self):
         today = date.today()
         next_week = today + timedelta(days=7)
