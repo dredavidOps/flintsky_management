@@ -27,9 +27,11 @@ This project is a **property management web app** built with Django REST Framewo
 ## 🏁 Quick Start (Local Dev with Kind)
 
 ## 📝 Notes
- - **No .env files or Docker Compose needed—all configuration is via K8s manifests.
- - **Noteworthy is that since this is a local deployment first, remember to ensure in the manifest you maintain the value 'Never' for 'imagePullPolicy'.
- - **Once you have an image published in dockerhub, you can reference and pull that to use for your own deployments.
+ - No .env files or Docker Compose needed—all configuration is via K8s manifests.
+ - Noteworthy is that since this is a local deployment first, remember to ensure in the manifest you maintain the value 'Never' for 'imagePullPolicy'.
+ - Once you have an image published in dockerhub, you can reference and pull that to use for your own deployments.
+ - API endpoints can be accessed after local deployment at the url: 127.0.0.1:8000/api
+
 
 ### 1. **Clone the Repository**
 
