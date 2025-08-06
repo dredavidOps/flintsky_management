@@ -23,9 +23,3 @@ __pycache__/
 
 # MacOS
 .DS_Store
-
-# Kubernetes
-# (do NOT ignore your yaml manifests!)
-
-# Migration files (optional)
-# core/migrations/
