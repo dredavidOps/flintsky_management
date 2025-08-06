@@ -23,3 +23,6 @@ __pycache__/
 
 # MacOS
 .DS_Store
+
+k8s-runbook
+/Users/davidyaotse/Downloads/flintsky_mgmt/k8s-runbook.txt
