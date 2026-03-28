@@ -6,5 +6,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/token/", obtain_auth_token, name="api-token"),
     path('api/', include('core.urls')),
+    path('', include('django_prometheus.urls')),
 ]
-
