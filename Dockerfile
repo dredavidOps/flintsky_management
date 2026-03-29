@@ -18,4 +18,7 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY . /app/
 
+# Create log directory for Loki/Promtail
+RUN mkdir -p /var/log/django && chmod 755 /var/log/django
+
 CMD ["gunicorn", "propertymgmt.wsgi:application", "--bind", "0.0.0.0:8000"]
