@@ -1,6 +1,6 @@
 # 🏢 Flintsky Management – Property Management Platform
 
-A RESTful API for property management built with **Django REST Framework** and **PostgreSQL**. Designed to help property managers oversee apartment availability, track leases, manage tenants, and handle maintenance requests.
+A full-stack property management platform built with **Django REST Framework**, **React**, and **PostgreSQL**. Designed to help property managers oversee apartment availability, track leases, manage tenants, and handle maintenance requests.
 
 [![Django](https://img.shields.io/badge/Django-5.2.4-green.svg)](https://www.djangoproject.com/)
 [![DRF](https://img.shields.io/badge/DRF-3.16.0-red.svg)](https://www.django-rest-framework.org/)
@@ -29,23 +29,27 @@ A RESTful API for property management built with **Django REST Framework** and *
 
 | Feature | Description |
 |---------|-------------|
-| 🏠 **Apartment Management** | Track apartment numbers, floors, and availability status |
+| 🏠 **Apartment Management** | Track apartment numbers, floors, bedrooms (1/2), and availability status |
 | 👥 **Tenant Management** | Store tenant contact information (name, email, phone) |
-| 📝 **Lease Tracking** | Manage move-in/move-out dates and lease status |
-| 🔧 **Maintenance Requests** | Create and track maintenance issues linked to leases |
+| 📝 **Lease Tracking** | Manage move-in/move-out dates with overlapping lease prevention |
+| 🔧 **Maintenance Requests** | Create and track maintenance issues linked to active leases |
 | 📊 **Dashboard Overview** | Get occupancy stats and upcoming move-ins/outs |
-| 🔐 **Token Authentication** | Secure API access with DRF token auth |
+| 🔐 **Token Authentication** | Secure API and frontend access with token auth |
+| 📈 **Monitoring** | Prometheus + Grafana dashboards with error tracking |
+| ⚡ **Modern UI** | React-based SPA with responsive design |
 
 ---
 
 ## 📦 Tech Stack
 
 - **Backend:** Django 5.2.4 + Django REST Framework 3.16.0
+- **Frontend:** React 18 + Vite
 - **Database:** PostgreSQL 15
 - **WSGI Server:** Gunicorn
 - **Containerization:** Docker
 - **Orchestration:** Kubernetes (Kind for local development)
 - **Authentication:** Token Authentication (DRF)
+- **Monitoring:** Prometheus + Grafana
 
 ---
 
@@ -82,6 +86,12 @@ EOF
 # 3. Build and start services
 docker-compose up --build
 
+# Or to start only the backend API:
+docker-compose up --build web db
+
+# To start the frontend separately:
+cd frontend && npm install && npm run dev
+
 # 4. Run migrations (in another terminal)
 docker-compose exec web python manage.py migrate
 
@@ -101,6 +111,7 @@ print(f'API Token: {token.key}')
 ```
 
 The API will be available at: **http://localhost:8000/api/**
+The frontend will be available at: **http://localhost:5173/** (if running separately)
 
 ---
 
@@ -206,6 +217,7 @@ curl -X POST http://localhost:8000/api/apartments/ \
   -d '{
     "number": "101A",
     "floor": 1,
+    "bedrooms": 2,
     "status": "available",
     "notes": "Recently renovated"
   }'
@@ -327,9 +339,20 @@ flintsky_management/
 │   ├── settings.py                # Django settings
 │   ├── urls.py                    # Root URL configuration
 │   └── wsgi.py                    # WSGI application
+├── frontend/                      # React frontend application
+│   ├── src/
+│   │   ├── components/            # React components (Apartments, Leases, Maintenance, etc.)
+│   │   ├── services/api.js        # API service layer
+│   │   └── App.jsx                # Main application component
+│   ├── package.json
+│   └── vite.config.js
+├── monitoring/                    # Monitoring & observability
+│   ├── grafana/                   # Grafana dashboards & provisioning
+│   └── prometheus/                # Prometheus configuration
 ├── k8s/
 │   └── propertymgmt-k8s.yaml      # Kubernetes manifests
 ├── Dockerfile                     # Docker image configuration
+├── docker-compose.yml             # Docker Compose configuration
 ├── requirements.txt               # Python dependencies
 ├── manage.py                      # Django management script
 └── README.md                      # This file
@@ -338,14 +361,15 @@ flintsky_management/
 ### Data Models
 
 ```
-┌─────────────┐     ┌─────────┐     ┌─────────┐
-│  Apartment  │◄────┤  Lease  ├────►│  Tenant  │
-└─────────────┘     └────┬────┘     └─────────┘
-                         │
-                         ▼
-                ┌─────────────────┐
-                │ MaintenanceRequest│
-                └─────────────────┘
+┌──────────────────────────────────────┐     ┌─────────┐     ┌─────────┐
+│  Apartment                           │◄────┤  Lease  ├────►│  Tenant  │
+│  - number, floor, bedrooms (1/2)     │     └────┬────┘     └─────────┘
+│  - status (available/occupied)       │          │
+└──────────────────────────────────────┘          ▼
+                                         ┌─────────────────┐
+                                         │ MaintenanceRequest│
+                                         │ - status: open/closed│
+                                         └─────────────────┘
 ```
 
 ---
@@ -381,6 +405,29 @@ docker-compose exec web python manage.py migrate
 # Kubernetes
 kubectl exec deployment/django -- python manage.py migrate
 ```
+
+---
+
+## 📈 Monitoring
+
+The project includes Prometheus and Grafana for monitoring:
+
+```bash
+# Start monitoring stack
+docker-compose up -d prometheus grafana
+```
+
+- **Grafana:** http://localhost:3000 (admin/admin)
+- **Prometheus:** http://localhost:9090
+
+### Available Dashboards
+
+| Dashboard | Metrics |
+|-----------|---------|
+| Django API Overview | Request rate, latency, success rate |
+| Errors & Issues | 4xx/5xx error rates, error distribution |
+| Database Metrics | Connection count, query duration |
+| Model Operations | Insert/update/delete counts |
 
 ---
 
