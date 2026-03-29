@@ -4,22 +4,23 @@ import './Dashboard.css';
 
 const Dashboard = () => {
   const [overview, setOverview] = useState(null);
+  const [maintenanceRequests, setMaintenanceRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchOverview();
+    fetchData();
     
     // Refresh data when window regains focus
     const handleFocus = () => {
-      fetchOverview();
+      fetchData();
     };
     
     window.addEventListener('focus', handleFocus);
     
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
-      fetchOverview();
+      fetchData();
     }, 30000);
     
     return () => {
@@ -28,10 +29,14 @@ const Dashboard = () => {
     };
   }, []);
 
-  const fetchOverview = async () => {
+  const fetchData = async () => {
     try {
-      const data = await apiService.getOverview();
-      setOverview(data);
+      const [overviewData, maintenanceData] = await Promise.all([
+        apiService.getOverview(),
+        apiService.getMaintenanceRequests(),
+      ]);
+      setOverview(overviewData);
+      setMaintenanceRequests(maintenanceData);
     } catch (err) {
       setError('Failed to load dashboard data');
     } finally {
@@ -44,14 +49,33 @@ const Dashboard = () => {
 
   const handleRefresh = () => {
     setLoading(true);
-    fetchOverview();
+    fetchData();
   };
+
+  // Calculate maintenance stats
+  const openRequests = maintenanceRequests.filter(r => r.status === 'open').length;
+  const closedRequests = maintenanceRequests.filter(r => r.status === 'closed').length;
+  const totalRequests = maintenanceRequests.length;
 
   const stats = [
     { label: 'Total Apartments', value: overview?.total_apartments || 0, icon: '🏢', color: '#3498db' },
     { label: 'Occupied', value: overview?.occupied || 0, icon: '✅', color: '#27ae60' },
     { label: 'Available', value: overview?.available || 0, icon: '🏠', color: '#f39c12' },
+    { label: 'Open Maintenance', value: openRequests, icon: '🔧', color: '#e74c3c' },
   ];
+
+  // Get recent maintenance requests (last 5)
+  const recentRequests = [...maintenanceRequests]
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+    .slice(0, 5);
+
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case 'open': return 'status-open';
+      case 'closed': return 'status-closed';
+      default: return '';
+    }
+  };
 
   return (
     <div className="dashboard">
@@ -126,6 +150,55 @@ const Dashboard = () => {
             </table>
           ) : (
             <p className="empty-message">No upcoming move-outs</p>
+          )}
+        </div>
+      </div>
+
+      {/* Maintenance Requests Section */}
+      <div className="maintenance-section">
+        <div className="section maintenance-summary">
+          <h2>🔧 Maintenance Overview</h2>
+          <div className="maintenance-stats">
+            <div className="maintenance-stat">
+              <span className="stat-number">{openRequests}</span>
+              <span className="stat-label">Open</span>
+            </div>
+            <div className="maintenance-stat">
+              <span className="stat-number">{closedRequests}</span>
+              <span className="stat-label">Closed</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="section recent-maintenance">
+          <h2>📝 Recent Maintenance Requests</h2>
+          {recentRequests.length > 0 ? (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Issue</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentRequests.map((request) => (
+                  <tr key={request.id}>
+                    <td>#{request.id}</td>
+                    <td className="issue-cell">{request.issue}</td>
+                    <td>
+                      <span className={`status-badge ${getStatusBadgeClass(request.status)}`}>
+                        {request.status}
+                      </span>
+                    </td>
+                    <td>{request.created_at ? new Date(request.created_at).toLocaleDateString() : 'N/A'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="empty-message">No maintenance requests</p>
           )}
         </div>
       </div>

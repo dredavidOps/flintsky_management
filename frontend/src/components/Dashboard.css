@@ -78,6 +78,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 30px;
+  margin-bottom: 40px;
 }
 
 .section {
@@ -134,4 +135,104 @@
 
 .error {
   color: #e74c3c;
+}
+
+/* Maintenance Section Styles */
+.maintenance-section {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.maintenance-summary {
+  display: flex;
+  flex-direction: column;
+}
+
+.maintenance-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 0;
+}
+
+.maintenance-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  transition: transform 0.2s;
+}
+
+.maintenance-stat:hover {
+  transform: translateX(5px);
+  background: #e9ecef;
+}
+
+.maintenance-stat .stat-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.maintenance-stat .stat-label {
+  font-size: 14px;
+  color: #7f8c8d;
+  text-transform: uppercase;
+}
+
+.recent-maintenance {
+  min-height: 300px;
+}
+
+.issue-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+  display: inline-block;
+}
+
+.status-open {
+  background: #fee;
+  color: #c33;
+}
+
+.status-closed {
+  background: #d4edda;
+  color: #155724;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .maintenance-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-sections {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
 }
