@@ -40,16 +40,6 @@ const Leases = () => {
     }
   };
 
-  const getApartmentNumber = (id) => {
-    const apt = apartments.find((a) => a.id === id);
-    return apt ? apt.number : `ID: ${id}`;
-  };
-
-  const getTenantName = (id) => {
-    const tenant = tenants.find((t) => t.id === id);
-    return tenant ? tenant.name : `ID: ${id}`;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -82,8 +72,8 @@ const Leases = () => {
   const handleEdit = (lease) => {
     setEditingLease(lease);
     setFormData({
-      apartment_id: lease.apartment_id,
-      tenant_id: lease.tenant_id,
+      apartment_id: lease.apartment?.id || '',
+      tenant_id: lease.tenant?.id || '',
       move_in: lease.move_in,
       move_out: lease.move_out || '',
       is_active: lease.is_active,
@@ -119,14 +109,14 @@ const Leases = () => {
 
   const columns = [
     {
-      key: 'apartment_id',
+      key: 'apartment',
       label: 'Apartment',
-      render: (value) => getApartmentNumber(value),
+      render: (value) => value?.number || 'N/A',
     },
     {
-      key: 'tenant_id',
+      key: 'tenant',
       label: 'Tenant',
-      render: (value) => getTenantName(value),
+      render: (value) => value?.name || 'N/A',
     },
     {
       key: 'move_in',
@@ -181,7 +171,7 @@ const Leases = () => {
             >
               <option value="">Select Apartment</option>
               {apartments
-                .filter((a) => a.status === 'available' || editingLease?.apartment_id === a.id)
+                .filter((a) => a.status === 'available' || editingLease?.apartment?.id === a.id)
                 .map((apt) => (
                   <option key={apt.id} value={apt.id}>
                     {apt.number} (Floor {apt.floor})
