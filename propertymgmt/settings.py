@@ -112,11 +112,18 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS Settings
-CORS_ALLOWED_ORIGINS = [
+# Allow additional origins from environment variable
+_default_origins = [
     "http://localhost:5173",  # Vite dev server
     "http://localhost:3000",  # Alternative frontend port
 ]
 
+# Parse additional origins from env
+_additional_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
+if _additional_origins:
+    _default_origins.extend([o.strip() for o in _additional_origins.split(",")])
+
+CORS_ALLOWED_ORIGINS = _default_origins
 CORS_ALLOW_CREDENTIALS = True
 
 # Django REST Framework global settings

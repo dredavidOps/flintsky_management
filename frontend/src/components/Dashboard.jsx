@@ -9,6 +9,23 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchOverview();
+    
+    // Refresh data when window regains focus
+    const handleFocus = () => {
+      fetchOverview();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchOverview();
+    }, 30000);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
   }, []);
 
   const fetchOverview = async () => {
@@ -25,6 +42,11 @@ const Dashboard = () => {
   if (loading) return <div className="loading">Loading dashboard...</div>;
   if (error) return <div className="error">{error}</div>;
 
+  const handleRefresh = () => {
+    setLoading(true);
+    fetchOverview();
+  };
+
   const stats = [
     { label: 'Total Apartments', value: overview?.total_apartments || 0, icon: '🏢', color: '#3498db' },
     { label: 'Occupied', value: overview?.occupied || 0, icon: '✅', color: '#27ae60' },
@@ -33,7 +55,12 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
-      <h1>Dashboard Overview</h1>
+      <div className="dashboard-header">
+        <h1>Dashboard Overview</h1>
+        <button className="btn-refresh" onClick={handleRefresh} title="Refresh Data">
+          🔄 Refresh
+        </button>
+      </div>
       
       <div className="stats-grid">
         {stats.map((stat, index) => (
