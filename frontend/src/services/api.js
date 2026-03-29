@@ -1,5 +1,44 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+/**
+ * Extract a readable error message from API error response.
+ * Django REST Framework returns errors in various formats:
+ * - { detail: "message" }
+ * - { field_name: ["error1", "error2"] }
+ * - { non_field_errors: ["message"] }
+ */
+function extractErrorMessage(error) {
+  if (!error || typeof error !== 'object') {
+    return 'An unexpected error occurred';
+  }
+  
+  // Handle { detail: "message" }
+  if (error.detail) {
+    return error.detail;
+  }
+  
+  // Handle { non_field_errors: ["message"] }
+  if (error.non_field_errors && Array.isArray(error.non_field_errors)) {
+    return error.non_field_errors.join(', ');
+  }
+  
+  // Handle field-specific errors { field_name: ["error"] }
+  const fieldErrors = [];
+  for (const [key, value] of Object.entries(error)) {
+    if (Array.isArray(value)) {
+      fieldErrors.push(`${key}: ${value.join(', ')}`);
+    } else if (typeof value === 'string') {
+      fieldErrors.push(`${key}: ${value}`);
+    }
+  }
+  
+  if (fieldErrors.length > 0) {
+    return fieldErrors.join('; ');
+  }
+  
+  return 'An unexpected error occurred';
+}
+
 class ApiService {
   constructor() {
     this.baseUrl = API_BASE_URL;
@@ -38,7 +77,8 @@ class ApiService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail || error.message || `HTTP ${response.status}`);
+      const errorMessage = extractErrorMessage(error);
+      throw new Error(errorMessage);
     }
 
     if (response.status === 204) {

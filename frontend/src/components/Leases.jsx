@@ -42,6 +42,13 @@ const Leases = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Client-side date validation
+    if (formData.move_in && formData.move_out && new Date(formData.move_in) > new Date(formData.move_out)) {
+      alert('Error: Move-in date must be before move-out date.');
+      return;
+    }
+    
     try {
       const payload = {
         ...formData,
@@ -174,7 +181,7 @@ const Leases = () => {
                 .filter((a) => a.status === 'available' || editingLease?.apartment?.id === a.id)
                 .map((apt) => (
                   <option key={apt.id} value={apt.id}>
-                    {apt.number} (Floor {apt.floor})
+                    {apt.number} (Floor {apt.floor}, {apt.bedrooms} BR)
                   </option>
                 ))}
             </select>

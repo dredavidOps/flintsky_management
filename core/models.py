@@ -8,6 +8,10 @@ from django.db.models.signals import post_save, post_delete
 class Apartment(models.Model):
     number = models.CharField(max_length=10, unique=True)
     floor = models.IntegerField()
+    bedrooms = models.IntegerField(
+        choices=[(1, '1 Bedroom'), (2, '2 Bedrooms')],
+        default=1
+    )
     status = models.CharField(
         max_length=10,
         choices=[('available', 'Available'), ('occupied', 'Occupied')],

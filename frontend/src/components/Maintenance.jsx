@@ -35,11 +35,6 @@ const Maintenance = () => {
     }
   };
 
-  const getLeaseInfo = (id) => {
-    const lease = leases.find((l) => l.id === id);
-    return lease ? `Lease #${lease.id}` : `ID: ${id}`;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -69,7 +64,7 @@ const Maintenance = () => {
   const handleEdit = (request) => {
     setEditingRequest(request);
     setFormData({
-      lease_id: request.lease_id,
+      lease_id: request.lease?.id || '',
       issue: request.issue,
       status: request.status,
     });
@@ -98,9 +93,14 @@ const Maintenance = () => {
   const columns = [
     { key: 'id', label: 'ID' },
     {
-      key: 'lease_id',
+      key: 'lease',
       label: 'Lease',
-      render: (value) => getLeaseInfo(value),
+      render: (value) => {
+        if (!value) return 'N/A';
+        const aptNum = value.apartment?.number || 'N/A';
+        const tenantName = value.tenant?.name || 'N/A';
+        return `Lease #${value.id} (${aptNum} - ${tenantName})`;
+      },
     },
     { key: 'issue', label: 'Issue' },
     {
@@ -150,11 +150,13 @@ const Maintenance = () => {
               required
             >
               <option value="">Select Lease</option>
-              {leases.map((lease) => (
-                <option key={lease.id} value={lease.id}>
-                  Lease #{lease.id} (Apt: {lease.apartment_id}, Tenant: {lease.tenant_id})
-                </option>
-              ))}
+              {leases
+                .filter((l) => l.is_active || editingRequest?.lease?.id === l.id)
+                .map((lease) => (
+                  <option key={lease.id} value={lease.id}>
+                    Lease #{lease.id} ({lease.apartment?.number || 'N/A'} - {lease.tenant?.name || 'N/A'})
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -176,7 +178,6 @@ const Maintenance = () => {
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
             >
               <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
               <option value="closed">Closed</option>
             </select>
           </div>

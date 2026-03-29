@@ -12,6 +12,7 @@ const Apartments = () => {
   const [formData, setFormData] = useState({
     number: '',
     floor: '',
+    bedrooms: 1,
     status: 'available',
     notes: '',
   });
@@ -41,7 +42,7 @@ const Apartments = () => {
       }
       setModalOpen(false);
       setEditingApartment(null);
-      setFormData({ number: '', floor: '', status: 'available', notes: '' });
+      setFormData({ number: '', floor: '', bedrooms: 1, status: 'available', notes: '' });
       fetchApartments();
     } catch (error) {
       alert('Error: ' + error.message);
@@ -53,6 +54,7 @@ const Apartments = () => {
     setFormData({
       number: apartment.number,
       floor: apartment.floor,
+      bedrooms: apartment.bedrooms,
       status: apartment.status,
       notes: apartment.notes || '',
     });
@@ -70,13 +72,14 @@ const Apartments = () => {
 
   const handleAddNew = () => {
     setEditingApartment(null);
-    setFormData({ number: '', floor: '', status: 'available', notes: '' });
+    setFormData({ number: '', floor: '', bedrooms: 1, status: 'available', notes: '' });
     setModalOpen(true);
   };
 
   const columns = [
     { key: 'number', label: 'Number' },
     { key: 'floor', label: 'Floor' },
+    { key: 'bedrooms', label: 'Bedrooms' },
     {
       key: 'status',
       label: 'Status',
@@ -130,6 +133,18 @@ const Apartments = () => {
               required
               min="0"
             />
+          </div>
+
+          <div className="form-group">
+            <label>Bedrooms *</label>
+            <select
+              value={formData.bedrooms}
+              onChange={(e) => setFormData({ ...formData, bedrooms: parseInt(e.target.value) })}
+              required
+            >
+              <option value={1}>1 Bedroom</option>
+              <option value={2}>2 Bedrooms</option>
+            </select>
           </div>
 
           <div className="form-group">
