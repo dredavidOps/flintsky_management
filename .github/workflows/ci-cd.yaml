@@ -50,6 +50,18 @@ jobs:
         echo "Database failed to start"
         exit 1
 
+    - name: Diagnostic — import settings
+      env:
+        SECRET_KEY: test-secret-key
+        DEBUG: 1
+        DATABASE_NAME: propertymgmt
+        DATABASE_USER: postgres
+        DATABASE_PASSWORD: postgres
+        DATABASE_HOST: localhost
+        DATABASE_PORT: 5432
+      run: |
+        python -c "import propertymgmt.settings; print('Settings imported OK')"
+
     - name: Run migrations
       env:
         SECRET_KEY: test-secret-key
@@ -60,7 +72,7 @@ jobs:
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
       run: |
-        python manage.py migrate
+        python manage.py migrate --traceback --verbosity 2
 
     - name: Run tests
       env:
