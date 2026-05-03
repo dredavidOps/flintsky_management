@@ -150,54 +150,70 @@ REST_FRAMEWORK = {
 # since we're using the prometheus_django_exporter in the main app
 
 # Logging Configuration for Loki
+# Determine log file path — fallback to local logs dir if /var/log/django isn't writable
+_log_file_path = os.getenv("LOG_FILE", "/var/log/django/django.log")
+_log_dir = os.path.dirname(_log_file_path)
+try:
+    os.makedirs(_log_dir, exist_ok=True)
+except OSError:
+    _log_file_path = str(BASE_DIR / "logs" / "django.log")
+    os.makedirs(os.path.dirname(_log_file_path), exist_ok=True)
+
+_logging_handlers = {
+    "console": {
+        "level": "DEBUG",
+        "class": "logging.StreamHandler",
+        "formatter": "simple",
+    },
+}
+_logging_root_handlers = ["console"]
+
+# Only add file handler if we successfully created the log directory
+if os.access(os.path.dirname(_log_file_path), os.W_OK):
+    _logging_handlers["file"] = {
+        "level": "INFO",
+        "class": "logging.FileHandler",
+        "filename": _log_file_path,
+        "formatter": "json",
+    }
+    _logging_root_handlers.append("file")
+
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'json': {
-            'format': '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "logger": "%(name)s"}'
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "format": '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "logger": "%(name)s"}'
         },
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
         },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': '/var/log/django/django.log',
-            'formatter': 'json',
-        },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
         },
     },
-    'root': {
-        'handlers': ['console', 'file'],
-        'level': 'INFO',
+    "handlers": _logging_handlers,
+    "root": {
+        "handlers": _logging_root_handlers,
+        "level": "INFO",
     },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
+    "loggers": {
+        "django": {
+            "handlers": _logging_root_handlers,
+            "level": "INFO",
+            "propagate": False,
         },
-        'django.request': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
+        "django.request": {
+            "handlers": _logging_root_handlers,
+            "level": "INFO",
+            "propagate": False,
         },
-        'core': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
+        "core": {
+            "handlers": _logging_root_handlers,
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
