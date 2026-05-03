@@ -7,6 +7,7 @@ A full-stack property management platform built with **Django REST Framework**, 
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://www.docker.com/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-ready-blue.svg)](https://kubernetes.io/)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue.svg)](.github/workflows/ci-cd.yaml)
 
 ---
 
@@ -15,13 +16,15 @@ A full-stack property management platform built with **Django REST Framework**, 
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [Quick Start](#-quick-start)
-  - [Option 1: Local Development (Docker Compose)](#option-1-local-development-with-docker-compose-recommended)
+  - [Option 1: Docker Compose (Recommended for Dev)](#option-1-local-development-with-docker-compose-recommended)
   - [Option 2: Kubernetes with Kind](#option-2-kubernetes-with-kind)
   - [Option 3: Production Kubernetes](#-kubernetes-deployment-recommended-for-production)
 - [API Reference](#-api-reference)
 - [Authentication](#-authentication)
 - [Environment Variables](#-environment-variables)
 - [Project Structure](#-project-structure)
+- [Monitoring & Observability](#-monitoring--observability)
+- [CI/CD](#-cicd)
 - [Troubleshooting](#-troubleshooting)
 
 ---
@@ -35,22 +38,23 @@ A full-stack property management platform built with **Django REST Framework**, 
 | 📝 **Lease Tracking** | Manage move-in/move-out dates with overlapping lease prevention |
 | 🔧 **Maintenance Requests** | Create and track maintenance issues linked to active leases |
 | 📊 **Dashboard Overview** | Get occupancy stats and upcoming move-ins/outs |
-| 🔐 **Token Authentication** | Secure API and frontend access with token auth |
-| 📈 **Monitoring** | Prometheus + Grafana dashboards with error tracking |
-| ⚡ **Modern UI** | React-based SPA with responsive design |
+| 🔐 **Token Authentication** | Secure API and frontend access with DRF token auth |
+| 📈 **Monitoring** | Prometheus + Grafana dashboards with Loki log aggregation |
+| ⚡ **Modern UI** | React 19 SPA with Vite, responsive design |
 
 ---
 
 ## 📦 Tech Stack
 
 - **Backend:** Django 5.2.4 + Django REST Framework 3.16.0
-- **Frontend:** React 18 + Vite
+- **Frontend:** React 19 + Vite
 - **Database:** PostgreSQL 15
 - **WSGI Server:** Gunicorn
-- **Containerization:** Docker
-- **Orchestration:** Kubernetes (Kind for local development)
+- **Containerization:** Docker & Docker Compose
+- **Orchestration:** Kubernetes (Kustomize + Kind for local development)
 - **Authentication:** Token Authentication (DRF)
-- **Monitoring:** Prometheus + Grafana
+- **Monitoring:** Prometheus + Grafana + Loki + Promtail
+- **CI/CD:** GitHub Actions
 
 ---
 
@@ -66,7 +70,7 @@ A full-stack property management platform built with **Django REST Framework**, 
 
 For a complete guide on Kubernetes orchestration and cloud migration, see **[KUBERNETES.md](KUBERNETES.md)**.
 
-Quick start with Kubernetes:
+Quick start with the deployment script:
 
 ```bash
 # One-command local deployment with Kind
@@ -75,7 +79,9 @@ Quick start with Kubernetes:
 # Or manual steps
 kind create cluster --name flintsky
 docker build -t flintsky/backend:latest .
+docker build -t flintsky/frontend:latest ./frontend
 kind load docker-image flintsky/backend:latest --name flintsky
+kind load docker-image flintsky/frontend:latest --name flintsky
 kubectl apply -k k8s/overlays/development/
 kubectl exec -it deployment/django -- python manage.py migrate
 ```
@@ -136,7 +142,7 @@ The frontend will be available at: **http://localhost:5173/** (if running separa
 
 ### Option 2: Kubernetes with Kind
 
-For production-like deployment locally:
+For production-like deployment locally using Kustomize overlays:
 
 ```bash
 # 1. Clone and navigate
@@ -146,14 +152,16 @@ cd flintsky_management
 # 2. Create a Kind cluster (if you don't have one)
 kind create cluster --name flintsky
 
-# 3. Build the Docker image
-docker build -t propertymgmt:local .
+# 3. Build images
+docker build -t flintsky/backend:latest .
+docker build -t flintsky/frontend:latest ./frontend
 
-# 4. Load the image into Kind
-kind load docker-image propertymgmt:local --name flintsky
+# 4. Load images into Kind
+kind load docker-image flintsky/backend:latest --name flintsky
+kind load docker-image flintsky/frontend:latest --name flintsky
 
-# 5. Deploy to Kubernetes
-kubectl apply -f k8s/propertymgmt-k8s.yaml
+# 5. Deploy using Kustomize
+kubectl apply -k k8s/overlays/development/
 
 # 6. Wait for pods to be ready
 kubectl wait --for=condition=ready pod -l app=django --timeout=120s
@@ -173,13 +181,14 @@ token, _ = Token.objects.get_or_create(user=user)
 print(f'API Token: {token.key}')
 EOF
 
-# 9. Port-forward to access the API
+# 9. Port-forward to access the services
 kubectl port-forward svc/django 8000:8000
+# (In another terminal) kubectl port-forward svc/frontend 5173:80
 ```
 
 The API will be available at: **http://localhost:8000/api/**
 
-**Note:** The K8s manifest uses `imagePullPolicy: Never` to use the locally built image.
+**Note:** The K8s overlays use `imagePullPolicy: Never` for local images. For production, update to pull from a container registry.
 
 ---
 
@@ -340,6 +349,7 @@ http://localhost:8000/admin/
 | `DATABASE_HOST` | ❌ No | `localhost` | PostgreSQL host |
 | `DATABASE_PORT` | ❌ No | `5432` | PostgreSQL port |
 | `DJANGO_ALLOWED_HOSTS` | ❌ No | `*` | Comma-separated allowed hosts |
+| `CORS_ALLOWED_ORIGINS` | ❌ No | `http://localhost:5173` | Additional CORS origins |
 
 ---
 
@@ -353,27 +363,57 @@ flintsky_management/
 │   ├── serializers.py             # DRF serializers
 │   ├── urls.py                    # API URL routing
 │   ├── admin.py                   # Django admin configuration
+│   ├── validators.py              # Custom validators
+│   ├── tests.py                   # Unit tests
 │   └── migrations/                # Database migrations
 ├── propertymgmt/                  # Django project configuration
 │   ├── settings.py                # Django settings
 │   ├── urls.py                    # Root URL configuration
-│   └── wsgi.py                    # WSGI application
-├── frontend/                      # React frontend application
+│   ├── wsgi.py                    # WSGI application
+│   └── asgi.py                    # ASGI application
+├── frontend/                      # React 19 frontend application
 │   ├── src/
 │   │   ├── components/            # React components (Apartments, Leases, Maintenance, etc.)
-│   │   ├── services/api.js        # API service layer
-│   │   └── App.jsx                # Main application component
+│   │   ├── context/               # React context providers
+│   │   ├── hooks/                 # Custom React hooks
+│   │   ├── pages/                 # Page components
+│   │   ├── services/              # API service layer
+│   │   ├── assets/                # Static assets
+│   │   ├── App.jsx                # Main application component
+│   │   └── main.jsx               # Entry point
 │   ├── package.json
 │   └── vite.config.js
-├── monitoring/                    # Monitoring & observability
+├── monitoring/                    # Monitoring & observability stack
 │   ├── grafana/                   # Grafana dashboards & provisioning
-│   └── prometheus/                # Prometheus configuration
-├── k8s/
-│   └── propertymgmt-k8s.yaml      # Kubernetes manifests
-├── Dockerfile                     # Docker image configuration
-├── docker-compose.yml             # Docker Compose configuration
+│   ├── prometheus/                # Prometheus configuration
+│   ├── loki/                      # Loki log aggregation config
+│   └── promtail/                  # Promtail log shipper config
+├── k8s/                           # Kubernetes manifests (Kustomize)
+│   ├── base/                      # Base Kustomize resources
+│   │   ├── django/                # Backend deployment, service, HPA
+│   │   ├── frontend/              # Frontend deployment, service
+│   │   ├── postgres/              # PostgreSQL statefulset, service
+│   │   ├── ingress/               # NGINX ingress rules
+│   │   ├── configmap.yaml         # Shared ConfigMap
+│   │   └── namespace.yaml         # Namespace definition
+│   ├── overlays/
+│   │   ├── development/           # Dev overlay (Kustomize)
+│   │   └── production/            # Prod overlay (Kustomize + patches)
+│   ├── propertymgmt-k8s.yaml      # Legacy monolithic K8s manifest
+│   ├── frontend-k8s.yaml          # Legacy frontend manifest
+│   └── ingress-k8s.yaml           # Legacy ingress manifest
+├── bridge/                        # Kompose-generated K8s manifests (desktop-only)
+│   ├── base/                      # Base resources
+│   └── overlays/                  # Environment overlays
+├── scripts/
+│   └── k8s-deploy.sh              # Automated K8s deployment script
+├── .github/workflows/
+│   └── ci-cd.yaml                 # GitHub Actions CI/CD pipeline
+├── Dockerfile                     # Backend Docker image
+├── docker-compose.yml             # Docker Compose stack
 ├── requirements.txt               # Python dependencies
 ├── manage.py                      # Django management script
+├── KUBERNETES.md                  # Detailed K8s deployment guide
 └── README.md                      # This file
 ```
 
@@ -393,25 +433,68 @@ flintsky_management/
 
 ---
 
+## 📈 Monitoring & Observability
+
+The project includes a full observability stack:
+
+```bash
+# Start monitoring stack with Docker Compose
+docker-compose up -d prometheus grafana loki promtail
+```
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| **Grafana** | http://localhost:3000 | admin / admin |
+| **Prometheus** | http://localhost:9090 | - |
+| **Loki** | http://localhost:3100 | - |
+
+### Available Dashboards
+
+| Dashboard | Metrics |
+|-----------|---------|
+| Django API Overview | Request rate, latency, success rate |
+| Errors & Issues | 4xx/5xx error rates, error distribution |
+| Database Metrics | Connection count, query duration |
+| Model Operations | Insert/update/delete counts |
+
+### Log Aggregation
+
+Application logs are shipped to **Loki** via **Promtail** in JSON format. Access logs in Grafana using the Loki data source.
+
+---
+
+## 🔄 CI/CD
+
+A GitHub Actions workflow (`.github/workflows/ci-cd.yaml`) automates:
+
+- **Testing:** Django tests with PostgreSQL service
+- **Linting:** Code quality checks
+- **Building:** Docker images for backend & frontend
+- **Publishing:** Images to GitHub Container Registry (`ghcr.io`)
+
+Triggers on push to `main`/`develop` branches, version tags (`v*`), and pull requests.
+
+---
+
 ## 🐛 Troubleshooting
 
 ### Issue: "SECRET_KEY environment variable must be set"
 **Solution:** Ensure the `SECRET_KEY` environment variable is set in your `.env` file or K8s Secret.
 
 ### Issue: "Database connection refused"
-**Solution:** 
+**Solution:**
 - With Docker Compose: Ensure the `db` service is running (`docker-compose ps`)
 - With K8s: Ensure the postgres pod is ready (`kubectl get pods`)
 
 ### Issue: "ImagePullBackOff" in Kubernetes
 **Solution:** Make sure you built the image locally and loaded it into Kind:
 ```bash
-docker build -t propertymgmt:local .
-kind load docker-image propertymgmt:local --name flintsky
+docker build -t flintsky/backend:latest .
+kind load docker-image flintsky/backend:latest --name flintsky
 ```
 
 ### Issue: "Invalid token" errors
-**Solution:** 
+**Solution:**
 1. Verify your token is correct
 2. Ensure the header format is exactly: `Authorization: Token <token>` (note the space and capitalization)
 
@@ -427,34 +510,12 @@ kubectl exec deployment/django -- python manage.py migrate
 
 ---
 
-## 📈 Monitoring
-
-The project includes Prometheus and Grafana for monitoring:
-
-```bash
-# Start monitoring stack
-docker-compose up -d prometheus grafana
-```
-
-- **Grafana:** http://localhost:3000 (admin/admin)
-- **Prometheus:** http://localhost:9090
-
-### Available Dashboards
-
-| Dashboard | Metrics |
-|-----------|---------|
-| Django API Overview | Request rate, latency, success rate |
-| Errors & Issues | 4xx/5xx error rates, error distribution |
-| Database Metrics | Connection count, query duration |
-| Model Operations | Insert/update/delete counts |
-
----
-
 ## 📝 Notes
 
-- No `.env` files are required for Kubernetes deployment—all configuration is via K8s ConfigMaps and Secrets.
-- The `imagePullPolicy: Never` setting in K8s manifests ensures the locally built image is used.
-- For production deployments, update the manifest to pull from a container registry (e.g., DockerHub).
+- No `.env` files are required for Kubernetes deployment — all configuration is via K8s ConfigMaps and Secrets.
+- The development overlay uses `imagePullPolicy: Never` to use locally built images.
+- For production deployments, update the overlay to pull from a container registry (e.g., GHCR, DockerHub).
+- See **[KUBERNETES.md](KUBERNETES.md)** for a comprehensive cloud migration guide.
 
 ---
 
@@ -474,5 +535,5 @@ Contributions are welcome! Please ensure:
 ---
 
 <p align="center">
-  Built with ❤️ using Django REST Framework
+  Built with ❤️ using Django REST Framework & React
 </p>
