@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: flintsky
+
+resources:
+  - ../../base/namespace.yaml
+  - ../../base/configmap.yaml
+  - ../../base/postgres/statefulset.yaml
+  - ../../base/postgres/service.yaml
+  - ../../base/django/deployment.yaml
+  - ../../base/django/service.yaml
+  - ../../base/django/hpa.yaml
+  - ../../base/frontend/deployment.yaml
+  - ../../base/frontend/service.yaml
+  - ../../base/ingress/ingress.yaml
+
+patchesStrategicMerge:
+  - patches/resource-limits.yaml
+
+images:
+  - name: flintsky/backend
+    newTag: v1.0.0
+  - name: flintsky/frontend
+    newTag: v1.0.0
+
+configMapGenerator:
+  - name: flintsky-config
+    behavior: merge
+    literals:
+      - DEBUG=0
+      - DJANGO_ALLOWED_HOSTS="api.flintsky.com"
+      - CORS_ALLOWED_ORIGINS="https://app.flintsky.com"

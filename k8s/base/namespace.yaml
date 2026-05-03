@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flintsky
+  labels:
+    app: flintsky
+    environment: production

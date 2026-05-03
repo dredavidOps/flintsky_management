@@ -17,6 +17,7 @@ A full-stack property management platform built with **Django REST Framework**, 
 - [Quick Start](#-quick-start)
   - [Option 1: Local Development (Docker Compose)](#option-1-local-development-with-docker-compose-recommended)
   - [Option 2: Kubernetes with Kind](#option-2-kubernetes-with-kind)
+  - [Option 3: Production Kubernetes](#-kubernetes-deployment-recommended-for-production)
 - [API Reference](#-api-reference)
 - [Authentication](#-authentication)
 - [Environment Variables](#-environment-variables)
@@ -60,6 +61,24 @@ A full-stack property management platform built with **Django REST Framework**, 
 - [Docker](https://docs.docker.com/get-docker/) & [Docker Compose](https://docs.docker.com/compose/install/)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/) (for K8s deployment)
 - [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/) (optional, for local K8s cluster)
+
+### 🚀 Kubernetes Deployment (Recommended for Production)
+
+For a complete guide on Kubernetes orchestration and cloud migration, see **[KUBERNETES.md](KUBERNETES.md)**.
+
+Quick start with Kubernetes:
+
+```bash
+# One-command local deployment with Kind
+./scripts/k8s-deploy.sh development all
+
+# Or manual steps
+kind create cluster --name flintsky
+docker build -t flintsky/backend:latest .
+kind load docker-image flintsky/backend:latest --name flintsky
+kubectl apply -k k8s/overlays/development/
+kubectl exec -it deployment/django -- python manage.py migrate
+```
 
 ---
 

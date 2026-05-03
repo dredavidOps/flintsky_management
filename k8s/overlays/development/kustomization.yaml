@@ -1,0 +1,44 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: flintsky
+
+resources:
+  - secret.yaml
+  - ../../base/namespace.yaml
+  - ../../base/configmap.yaml
+  - ../../base/postgres/statefulset.yaml
+  - ../../base/postgres/service.yaml
+  - ../../base/django/deployment.yaml
+  - ../../base/django/service.yaml
+  - ../../base/frontend/deployment.yaml
+  - ../../base/frontend/service.yaml
+
+patches:
+  - target:
+      kind: Deployment
+      name: django
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: frontend
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+
+configMapGenerator:
+  - name: flintsky-config
+    behavior: merge
+    literals:
+      - DEBUG=1
+      - DJANGO_ALLOWED_HOSTS="*"
