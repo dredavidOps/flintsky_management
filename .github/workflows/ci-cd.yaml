@@ -9,8 +9,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ${{ github.repository }}/backend
-  FRONTEND_IMAGE: ${{ github.repository }}/frontend
 
 jobs:
   test:
@@ -22,7 +20,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: propertymgmt
         options: >-
-          --health-cmd pg_isready
+          --health-cmd pg_isready -U postgres -d propertymgmt
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -42,19 +40,37 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Wait for database
+      run: |
+        for i in {1..10}; do
+          pg_isready -h localhost -p 5432 -U postgres && echo "Database ready" && exit 0
+          echo "Waiting for database..."
+          sleep 2
+        done
+        echo "Database failed to start"
+        exit 1
+
     - name: Run migrations
       env:
         SECRET_KEY: test-secret-key
-        DATABASE_HOST: localhost
+        DEBUG: 1
+        DATABASE_NAME: propertymgmt
+        DATABASE_USER: postgres
         DATABASE_PASSWORD: postgres
+        DATABASE_HOST: localhost
+        DATABASE_PORT: 5432
       run: |
         python manage.py migrate
 
     - name: Run tests
       env:
         SECRET_KEY: test-secret-key
-        DATABASE_HOST: localhost
+        DEBUG: 1
+        DATABASE_NAME: propertymgmt
+        DATABASE_USER: postgres
         DATABASE_PASSWORD: postgres
+        DATABASE_HOST: localhost
+        DATABASE_PORT: 5432
       run: |
         python manage.py test
 
@@ -78,11 +94,17 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Normalize repository name
+      id: repo
+      run: |
+        REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        echo "REPO_LOWER=$REPO_LOWER" >> "$GITHUB_OUTPUT"
+
     - name: Extract metadata (backend)
       id: meta-backend
       uses: docker/metadata-action@v5
       with:
-        images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
+        images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.REPO_LOWER }}/backend
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -94,7 +116,7 @@ jobs:
       id: meta-frontend
       uses: docker/metadata-action@v5
       with:
-        images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}
+        images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.REPO_LOWER }}/frontend
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -127,18 +149,18 @@ jobs:
   #   runs-on: ubuntu-latest
   #   needs: build
   #   if: github.ref == 'refs/heads/main'
-  #   
+  #
   #   steps:
   #   - uses: actions/checkout@v4
-  #   
+  #
   #   - name: Set up kubectl
   #     uses: azure/setup-kubectl@v3
-  #   
+  #
   #   - name: Configure kubectl
   #     run: |
   #       echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
   #       export KUBECONFIG=kubeconfig
-  #   
+  #
   #   - name: Deploy to Kubernetes
   #     run: |
   #       export KUBECONFIG=kubeconfig
@@ -147,10 +169,10 @@ jobs:
   #       kustomize edit set image \
   #         flintsky/backend=${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
   #         flintsky/frontend=${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-  #       
+  #
   #       # Apply manifests
   #       kubectl apply -k .
-  #       
+  #
   #       # Wait for rollout
   #       kubectl rollout status deployment/django -n flintsky
   #       kubectl rollout status deployment/frontend -n flintsky
