@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import dj_database_url
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -13,9 +14,9 @@ if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable must be set")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'web', '*']
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 
 # Application definition
@@ -27,6 +28,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
@@ -37,6 +39,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -70,15 +73,14 @@ WSGI_APPLICATION = "propertymgmt.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+_db_config = dj_database_url.config(
+    default=f"postgres://{os.getenv('DATABASE_USER', 'postgres')}:{os.getenv('DATABASE_PASSWORD', '')}@{os.getenv('DATABASE_HOST', 'localhost')}:{os.getenv('DATABASE_PORT', '5432')}/{os.getenv('DATABASE_NAME', 'propertymgmt')}",
+    conn_max_age=600,
+)
+_db_config["ENGINE"] = "django_prometheus.db.backends.postgresql"
+
 DATABASES = {
-    "default": {
-       'ENGINE': 'django_prometheus.db.backends.postgresql',
-        'NAME': os.getenv('DATABASE_NAME'),
-        'USER': os.getenv('DATABASE_USER'),
-        'PASSWORD': os.getenv('DATABASE_PASSWORD'),
-        'HOST': os.getenv('DATABASE_HOST', 'localhost'),
-        'PORT': os.getenv('DATABASE_PORT', 5432),
-    }
+    "default": _db_config
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -107,7 +109,8 @@ USE_TZ = True
 
 
 STATIC_URL = "static/"
-
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -117,6 +120,11 @@ _default_origins = [
     "http://localhost:5173",  # Vite dev server
     "http://localhost:3000",  # Alternative frontend port
 ]
+
+# Add deployed frontend URL from env
+_frontend_url = os.getenv("FRONTEND_URL")
+if _frontend_url:
+    _default_origins.append(_frontend_url)
 
 # Parse additional origins from env
 _additional_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
